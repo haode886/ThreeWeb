@@ -39,6 +39,62 @@ def extract_model_name(file_name):
         return os.path.splitext(file_name)[0]
     return file_name
 
+# API路由：上传ZIP模型文件
+@app.route('/api/upload-model', methods=['POST'])
+def upload_model():
+    try:
+        # 检查是否有文件上传
+        if 'file' not in request.files:
+            return jsonify({'error': '未选择文件'}), 400
+        
+        file = request.files['file']
+        
+        # 检查文件名是否为空
+        if file.filename == '':
+            return jsonify({'error': '未选择文件'}), 400
+        
+        # 检查文件类型
+        if not file.filename.endswith('.zip'):
+            return jsonify({'error': '只支持ZIP格式文件'}), 400
+        
+        # 确保MMD目录存在
+        mmd_dir = 'MMD'
+        if not os.path.exists(mmd_dir):
+            os.makedirs(mmd_dir)
+        
+        # 保存文件
+        file_path = os.path.join(mmd_dir, file.filename)
+        
+        # 如果文件已存在，可以选择覆盖或重命名
+        if os.path.exists(file_path):
+            # 生成新文件名，避免覆盖
+            base_name, ext = os.path.splitext(file.filename)
+            counter = 1
+            new_file_name = f"{base_name}_{counter}{ext}"
+            while os.path.exists(os.path.join(mmd_dir, new_file_name)):
+                counter += 1
+                new_file_name = f"{base_name}_{counter}{ext}"
+            file_path = os.path.join(mmd_dir, new_file_name)
+            file.filename = new_file_name
+        
+        file.save(file_path)
+        print(f'上传文件成功: {file_path}')
+        
+        # 提取模型名称
+        model_name = extract_model_name(file.filename)
+        
+        # 返回成功信息
+        return jsonify({
+            'success': True,
+            'message': '文件上传成功',
+            'fileName': file.filename,
+            'modelName': model_name
+        })
+        
+    except Exception as e:
+        print(f'上传文件时出错: {str(e)}')
+        return jsonify({'error': str(e)}), 500
+
 # API路由：获取模型文件列表
 @app.route('/api/models')
 def get_models():
