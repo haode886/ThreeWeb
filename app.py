@@ -3,6 +3,7 @@ import os
 import re
 import zipfile
 import shutil
+from pathlib import Path
 
 # 创建Flask应用实例
 app = Flask(__name__, 
@@ -143,6 +144,10 @@ def get_models():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/upload')
+def upload():
+    return render_template('upload.html')
 
 # 提供MMD目录下的文件访问
 @app.route('/MMD/<path:path>')
@@ -371,6 +376,48 @@ def get_pmx_files():
 def serve_unzipped_files(path):
     return send_from_directory('MMD/unzipped', path)
 
+@app.route('/IMG/<path:path>')
+def send_image_file(path):
+    return send_from_directory('IMG', path)
+
+@app.route('/imgview')
+def imgview_page():
+    # 获取所有相册项目列表
+    albums = []
+    img_dir = Path('IMG')
+    if img_dir.exists():
+        albums = [d.name for d in img_dir.iterdir() if d.is_dir()]
+    return render_template('imgview.html', albums=albums)
+
+@app.route('/api/album/<album_name>')
+def get_album_images(album_name):
+    # 安全检查，防止路径遍历
+    if '..' in album_name or '/' in album_name or '\\' in album_name:
+        return jsonify({'error': '无效的相册名称'}), 400
+    
+    album_path = Path('IMG') / album_name
+    if not album_path.exists() or not album_path.is_dir():
+        return jsonify({'error': '相册不存在'}), 404
+    
+    # 获取相册中的所有图片文件
+    image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+    images = []
+    
+    for file in album_path.iterdir():
+        if file.is_file() and file.suffix.lower() in image_extensions:
+            images.append({
+                'name': file.name,
+                'path': f'/IMG/{album_name}/{file.name}'
+            })
+    
+    # 按文件名排序
+    images.sort(key=lambda x: x['name'])
+    
+    return jsonify({
+        'album_name': album_name,
+        'images': images
+    })
+
 # 主页面路由 - 使用render_template渲染模板
 @app.route('/view')
 def view_page():
@@ -386,4 +433,4 @@ if __name__ == '__main__':
             os.makedirs(dir_path)
             print(f'创建目录: {dir_path}')
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8056, debug=True)

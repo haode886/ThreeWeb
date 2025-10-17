@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片相册 - ThreeWeb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            padding: 15px;
+        }
+        
+        .album-selector {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .album-selector h2 {
+            margin-bottom: 10px;
+            color: #fff;
+            font-size: 18px;
+            display: block;
+        }
+        
+        #album-dropdown {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background-color: #222;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            display: block;
+            margin: 10px auto 0;
+            transition: all 0.3s;
+        }
+        
+        #album-dropdown:hover {
+            border-color: #3498db;
+            background-color: #2a2a2a;
+        }
+        
+        #album-dropdown:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+        }
+        
+        .gallery-container {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            min-height: 600px;
+        }
+        
+        .gallery-header {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .gallery-header h2 {
+            font-size: 20px;
+            color: #ddd;
+        }
+        
+        .gallery-stats {
+            color: #bbb;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .image-slider {
+            position: relative;
+            overflow: hidden;
+            height: 500px;
+            cursor: grab;
+        }
+        
+        .image-slider:active {
+            cursor: grabbing;
+        }
+        
+        .slider-track {
+            display: flex;
+            height: 100%;
+            transition: transform 0.3s ease;
+        }
+        
+        .slide {
+            flex: 0 0 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: opacity 0.3s;
+        }
+        
+        .slide-loading img {
+            opacity: 0;
+        }
+        
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            color: #3498db;
+            display: none;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .slide-loading .loading-indicator {
+            display: block;
+        }
+        
+        .nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(52, 58, 64, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #fff;
+            transition: all 0.3s;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+            flex-shrink: 0;
+            margin: 0;
+        }
+        
+        .nav-btn:hover {
+            background-color: rgba(52, 58, 64, 1);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.1);
+        }
+        
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .controls-container {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            width: auto;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .pagination {
+            display: inline-flex;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .nav-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        
+        #prev-btn {
+            margin-right: 5px;
+        }
+        
+        #next-btn {
+            margin-left: 5px;
+        }
+        
+        .image-caption-container {
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .image-caption {
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            white-space: nowrap;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+        
+        /* 移除旧的分页容器样式，现在使用controls-container */
+        
+        .pagination {
+            display: inline-flex;
+            gap: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin: 0 auto;
+        }
+        
+        .pagination-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .pagination-dot:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .pagination-dot.active {
+            background-color: #fff;
+            border-color: #3498db;
+            transform: scale(1.4);
+        }
+        
+        /* 移除旧的图片标题样式，现在使用新的样式容器 */
+        
+        .no-images {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 500px;
+            color: #bbb;
+            text-align: center;
+            background-color: #111;
+            border-radius: 8px;
+        }
+        
+        .no-images i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.4;
+        }
+        
+        .no-images p {
+            font-size: 18px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: rgba(52, 58, 64, 0.9);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .back-link:hover {
+            background-color: rgba(52, 58, 64, 1);
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .back-link-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .gallery-container {
+                min-height: 500px;
+            }
+            
+            .image-slider {
+                height: 400px;
+            }
+            
+            .nav-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            
+            .navigation {
+                padding: 0 10px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+</head>
+<body>
+    <div class="container">
+        
+        <div class="album-selector">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <h2>📂 选择相册</h2>
+                <a href="/" class="back-link">
+                    <i class="fas fa-arrow-left"></i> 返回首页
+                </a>
+            </div>
+            <select id="album-dropdown" onchange="handleAlbumChange()" style="width: 100%; font-size: 18px; font-weight: bold;">
+                <option value="">-- 请选择一个相册 --</option>
+                {% for album in albums %}
+                    <option value="{{ album }}">{{ album }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="gallery-container">
+            <div class="gallery-header" style="display: flex; align-items: center; gap: 10px;">
+                <h2 id="current-album-name">请选择一个相册</h2>
+                <div class="gallery-stats" id="gallery-stats"></div>
+            </div>
+            
+            <!-- 文件名显示区域 - 完全移出图片显示区域 -->
+            <div class="image-caption-container" style="display: none;">
+                <div class="image-caption" id="current-image-caption"></div>
+            </div>
+            
+            <div id="no-images-message" class="no-images">
+                <i class="fas fa-images"></i>
+                <p>请从上方选择一个相册开始浏览</p>
+            </div>
+            
+            <div id="image-gallery" style="display: none;">
+                <div class="image-slider" id="image-slider">
+                    <div class="slider-track" id="slider-track">
+                        <!-- 图片将动态插入这里 -->
+                    </div>
+                    
+                    <div class="loading-indicator">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                </div>
+                
+                <!-- 导航按钮和分页原点显示区域 - 在同一行且适当间距 -->
+                <div style="text-align: center; margin-top: 15px;">
+                    <div style="display: inline-flex; align-items: center; gap: 0;">
+                        <button class="nav-btn" id="prev-btn" style="margin: 0; width: 40px; height: 40px; font-size: 20px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-right: 10px;">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        
+                        <div class="pagination" id="pagination" style="display: inline-flex; gap: 10px; margin: 0; padding: 0;"></div>
+                        
+                        <button class="nav-btn" id="next-btn" style="margin: 0; width: 40px; height: 40px; font-size: 20px; background-color: #333; color: white; border: none; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 10px;">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+    </div>
+    
+    <script>
+        // 全局变量
+        let currentAlbum = null;
+        let currentImageIndex = 0;
+        let images = [];
+        let startX = 0;
+        let currentTranslate = 0;
+        let prevTranslate = 0;
+        let isDragging = false;
+        let animationID = 0;
+        
+        // DOM元素
+        const albumDropdown = document.getElementById('album-dropdown');
+        const currentAlbumName = document.getElementById('current-album-name');
+        const galleryStats = document.getElementById('gallery-stats');
+        const noImagesMessage = document.getElementById('no-images-message');
+        const imageGallery = document.getElementById('image-gallery');
+        const sliderTrack = document.getElementById('slider-track');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const pagination = document.getElementById('pagination');
+        const imageSlider = document.getElementById('image-slider');
+        const imageCaptionContainer = document.querySelector('.image-caption-container');
+        const currentImageCaption = document.getElementById('current-image-caption');
+        
+        // 全屏预览相关元素
+        let fullscreenViewer;
+        let fullscreenSlider;
+        let fullscreenSliderTrack;
+        let fullscreenCloseBtn;
+        let fullscreenCurrentIndex = 0;
+        let fullscreenStartX = 0;
+        let fullscreenStartY = 0;
+        let fullscreenCurrentTranslate = 0;
+        let fullscreenPrevTranslate = 0;
+        let fullscreenIsDragging = false;
+        let fullscreenAnimationID = 0;
+        let isPinching = false;
+        
+        // 缩放相关变量
+        let scale = 1;
+        let lastDistance = null;
+        let lastScale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let startTranslateX = 0;
+        let startTranslateY = 0;
+        
+        // 事件监听
+        albumDropdown.addEventListener('change', handleAlbumChange);
+        prevBtn.addEventListener('click', goToPrevSlide);
+        nextBtn.addEventListener('click', goToNextSlide);
+        
+        // 触摸和拖拽事件
+        imageSlider.addEventListener('touchstart', touchStart);
+        imageSlider.addEventListener('touchend', touchEnd);
+        imageSlider.addEventListener('touchmove', touchMove);
+        imageSlider.addEventListener('mousedown', touchStart);
+        imageSlider.addEventListener('mouseup', touchEnd);
+        imageSlider.addEventListener('mouseleave', touchEnd);
+        imageSlider.addEventListener('mousemove', touchMove);
+        // 添加全局鼠标释放事件，确保在任何情况下都能重置拖动状态
+        document.addEventListener('mouseup', function(e) {
+            if (isDragging && e.target === imageSlider) {
+                touchEnd();
+            }
+        });
+        
+        // 键盘导航
+        document.addEventListener('keydown', handleKeydown);
+        
+        // 处理相册选择变化
+        function handleAlbumChange() {
+            const albumName = albumDropdown.value;
+            if (!albumName) return;
+            
+            loadAlbum(albumName);
+        }
+        
+        // 加载相册
+        async function loadAlbum(albumName) {
+            try {
+                const response = await fetch(`/api/album/${encodeURIComponent(albumName)}`);
+                if (!response.ok) {
+                    throw new Error('加载相册失败');
+                }
+                
+                const data = await response.json();
+                currentAlbum = data.album_name;
+                images = data.images;
+                currentImageIndex = 0;
+                
+                updateGalleryUI();
+            } catch (error) {
+                console.error('加载相册时出错:', error);
+                alert('加载相册失败，请稍后重试');
+            }
+        }
+        
+        // 更新相册UI
+        function updateGalleryUI() {
+            // 更新标题和统计信息
+            currentAlbumName.textContent = currentAlbum;
+            galleryStats.textContent = images.length > 0 ? `共 ${images.length} 张图片` : '暂无图片';
+            
+            // 显示或隐藏相应元素
+            if (images.length > 0) {
+                noImagesMessage.style.display = 'none';
+                imageGallery.style.display = 'block';
+                imageCaptionContainer.style.display = 'block';
+                renderSlides();
+                renderPagination();
+                updateSlidePosition();
+                updatePagination();
+                updateImageCaption();
+            } else {
+                noImagesMessage.style.display = 'flex';
+                imageGallery.style.display = 'none';
+                imageCaptionContainer.style.display = 'none';
+            }
+        }
+        
+        // 渲染幻灯片
+        function renderSlides() {
+            sliderTrack.innerHTML = '';
+            
+            images.forEach((image, index) => {
+                const slide = document.createElement('div');
+                slide.classList.add('slide');
+                slide.dataset.index = index;
+                
+                const img = document.createElement('img');
+                img.src = image.path;
+                img.alt = image.name;
+                
+                // 添加点击事件，触发全屏预览
+                img.addEventListener('click', () => {
+                    openFullscreenViewer(index);
+                });
+                
+                // 添加加载指示器
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.classList.add('loading-indicator');
+                loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i><div style="margin-top: 10px; font-size: 14px; color: #bbb;">加载中...</div>';
+                
+                // 图片加载处理
+                slide.classList.add('slide-loading');
+                img.onload = () => {
+                    slide.classList.remove('slide-loading');
+                };
+                
+                slide.appendChild(img);
+                slide.appendChild(loadingIndicator);
+                sliderTrack.appendChild(slide);
+            });
+            
+            // 更新当前图片标题
+            if (images.length > 0) {
+                updateImageCaption();
+            }
+        }
+        
+        // 渲染分页指示器
+        function renderPagination() {
+            pagination.innerHTML = '';
+            
+            images.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.classList.add('pagination-dot');
+                dot.dataset.index = index;
+                
+                dot.addEventListener('click', () => {
+                    currentImageIndex = index;
+                    updateSlidePosition();
+                    updatePagination();
+                });
+                
+                pagination.appendChild(dot);
+            });
+        }
+        
+        // 更新分页指示器
+        function updatePagination() {
+            const dots = pagination.querySelectorAll('.pagination-dot');
+            dots.forEach((dot, index) => {
+                if (index === currentImageIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+        
+        // 更新图片标题
+        function updateImageCaption() {
+            if (images.length > 0 && currentImageIndex < images.length) {
+                currentImageCaption.textContent = images[currentImageIndex].name;
+                imageCaptionContainer.style.display = 'block';
+            } else {
+                imageCaptionContainer.style.display = 'none';
+            }
+        }
+        
+        // 更新幻灯片位置
+        function updateSlidePosition() {
+            const slideWidth = -currentImageIndex * 100;
+            sliderTrack.style.transform = `translateX(${slideWidth}%)`;
+            updatePagination();
+        }
+        
+        // 上一张
+        function goToPrevSlide() {
+            if (currentImageIndex > 0) {
+                currentImageIndex--;
+                updateSlidePosition();
+                updatePagination();
+                updateImageCaption();
+            }
+        }
+        
+        // 下一张
+        function goToNextSlide() {
+            if (currentImageIndex < images.length - 1) {
+                currentImageIndex++;
+                updateSlidePosition();
+                updatePagination();
+                updateImageCaption();
+            }
+        }
+        
+        // 全局变量 - 添加移动距离记录
+        let totalMoveDistance = 0;
+        
+        // 触摸/鼠标开始
+        function touchStart(e) {
+            startX = getPositionX(e);
+            isDragging = true;
+            totalMoveDistance = 0;
+            
+            // 取消正在进行的动画
+            cancelAnimationFrame(animationID);
+            
+            // 阻止默认行为以避免不必要的拖动
+            if (e.type.includes('mouse')) {
+                e.preventDefault();
+            }
+        }
+        
+        // 触摸/鼠标移动
+        function touchMove(e) {
+            if (!isDragging) return;
+            
+            const currentPosition = getPositionX(e);
+            const diff = currentPosition - startX;
+            totalMoveDistance = Math.abs(diff); // 记录移动总距离
+            currentTranslate = prevTranslate + diff;
+            
+            // 限制拖动范围，增加一点弹性
+            if (currentTranslate > 30) {
+                currentTranslate = 30;
+            } else if (currentTranslate < -(images.length - 1) * 100 - 30) {
+                currentTranslate = -(images.length - 1) * 100 - 30;
+            }
+            
+            setSliderPosition();
+        }
+        
+        // 触摸/鼠标结束
+        function touchEnd() {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            
+            // 根据拖动距离决定是切换图片还是回到原位
+            const threshold = 20; // 减小阈值，让用户只需轻轻滑动
+            const minMovement = 5; // 最小移动距离，避免纯点击被误判为滑动
+            
+            // 检查是否有足够的移动距离，避免纯点击触发切换
+            if (totalMoveDistance >= minMovement) {
+                // 计算相对当前位置的偏移百分比
+                const relativeTranslate = currentTranslate - prevTranslate;
+                
+                if (relativeTranslate > threshold && currentImageIndex > 0) {
+                    // 向右拖动超过阈值，显示上一张
+                    currentImageIndex--;
+                } else if (relativeTranslate < -threshold && currentImageIndex < images.length - 1) {
+                    // 向左拖动超过阈值，显示下一张
+                    currentImageIndex++;
+                }
+            }
+            
+            // 应用惯性动画
+            applyInertia();
+            
+            // 确保位置正确更新
+            const targetPosition = -currentImageIndex * 100;
+            prevTranslate = targetPosition;
+            currentTranslate = targetPosition;
+            
+            updatePagination();
+            updateImageCaption();
+        }
+        
+        // 设置滑块位置
+        function setSliderPosition() {
+            sliderTrack.style.transform = `translateX(${currentTranslate}%)`;
+        }
+        
+        // 应用惯性动画
+        function applyInertia() {
+            const targetPosition = -currentImageIndex * 100;
+            const duration = 300; // 动画持续时间
+            const startTime = performance.now();
+            const startPosition = currentTranslate;
+            const distance = targetPosition - startPosition;
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // 使用缓动函数
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                currentTranslate = startPosition + distance * easeOut;
+                
+                setSliderPosition();
+                
+                if (progress < 1) {
+                    animationID = requestAnimationFrame(animate);
+                } else {
+                    currentTranslate = targetPosition;
+                    setSliderPosition();
+                    prevTranslate = currentTranslate;
+                }
+            }
+            
+            animationID = requestAnimationFrame(animate);
+        }
+        
+        // 获取触摸/鼠标位置
+        function getPositionX(e) {
+            return e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        }
+        
+        function getPositionY(e) {
+            return e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        }
+        
+        // 保存Y轴起始位置已在全局变量中声明
+        
+        // 修改getPositionX函数调用处，同时保存Y轴位置
+        const originalTouchStart = fullscreenTouchStart;
+        fullscreenTouchStart = function(e) {
+            fullscreenStartY = getPositionY(e);
+            originalTouchStart(e);
+        };
+        
+        // 键盘导航
+        function handleKeydown(e) {
+            if (images.length === 0) return;
+            
+            // 如果全屏预览打开，则控制全屏预览
+            if (document.fullscreenElement || fullscreenViewer && fullscreenViewer.style.display === 'flex') {
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        fullscreenGoToPrevSlide();
+                        break;
+                    case 'ArrowRight':
+                        fullscreenGoToNextSlide();
+                        break;
+                    case 'Escape':
+                        closeFullscreenViewer();
+                        break;
+                }
+            } else {
+                // 否则控制普通视图
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        goToPrevSlide();
+                        break;
+                    case 'ArrowRight':
+                        goToNextSlide();
+                        break;
+                }
+            }
+        }
+        
+        // ===== 全屏预览功能 =====
+        function openFullscreenViewer(index) {
+            // 初始化全屏查看器（如果不存在）
+            if (!fullscreenViewer) {
+                createFullscreenViewer();
+            }
+            
+            // 设置当前索引
+            fullscreenCurrentIndex = index;
+            fullscreenPrevTranslate = -fullscreenCurrentIndex * 100;
+            fullscreenCurrentTranslate = fullscreenPrevTranslate;
+            
+            // 渲染全屏幻灯片
+            renderFullscreenSlides();
+            
+            // 显示全屏查看器
+            fullscreenViewer.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 防止背景滚动
+            
+            // 尝试进入全屏模式
+            if (fullscreenViewer.requestFullscreen) {
+                fullscreenViewer.requestFullscreen();
+            }
+        }
+        
+        function closeFullscreenViewer() {
+            // 退出全屏模式
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+            
+            // 隐藏全屏查看器
+            if (fullscreenViewer) {
+                fullscreenViewer.style.display = 'none';
+            }
+            document.body.style.overflow = 'auto'; // 恢复背景滚动
+        }
+        
+        function createFullscreenViewer() {
+            // 创建全屏查看器容器
+            fullscreenViewer = document.createElement('div');
+            fullscreenViewer.id = 'fullscreen-viewer';
+            fullscreenViewer.style.cssText = `
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.95);
+                z-index: 1000;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+            `;
+            
+            // 创建关闭按钮
+            fullscreenCloseBtn = document.createElement('button');
+            fullscreenCloseBtn.id = 'fullscreen-close-btn';
+            fullscreenCloseBtn.innerHTML = '<i class="fas fa-times"></i>';
+            fullscreenCloseBtn.style.cssText = `
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                width: 40px;
+                height: 40px;
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 20px;
+                cursor: pointer;
+                z-index: 1001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            fullscreenCloseBtn.addEventListener('click', closeFullscreenViewer);
+            
+            // 创建全屏滑块容器
+            fullscreenSlider = document.createElement('div');
+            fullscreenSlider.id = 'fullscreen-slider';
+            fullscreenSlider.style.cssText = `
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                position: relative;
+            `;
+            
+            // 创建全屏滑块轨道
+            fullscreenSliderTrack = document.createElement('div');
+            fullscreenSliderTrack.id = 'fullscreen-slider-track';
+            fullscreenSliderTrack.style.cssText = `
+                display: flex;
+                transition: transform 0.3s ease;
+                height: 100%;
+            `;
+            
+            // 组装元素
+            fullscreenSlider.appendChild(fullscreenSliderTrack);
+            fullscreenViewer.appendChild(fullscreenCloseBtn);
+            fullscreenViewer.appendChild(fullscreenSlider);
+            
+            // 添加到文档
+            document.body.appendChild(fullscreenViewer);
+            
+            // 添加触摸和鼠标事件
+            fullscreenSlider.addEventListener('touchstart', fullscreenTouchStart);
+            fullscreenSlider.addEventListener('touchend', fullscreenTouchEnd);
+            fullscreenSlider.addEventListener('touchmove', fullscreenTouchMove);
+            fullscreenSlider.addEventListener('mousedown', fullscreenTouchStart);
+            fullscreenSlider.addEventListener('mouseup', fullscreenTouchEnd);
+            fullscreenSlider.addEventListener('mouseleave', fullscreenTouchEnd);
+            fullscreenSlider.addEventListener('mousemove', fullscreenTouchMove);
+            
+            // 添加全局重置缩放事件
+            fullscreenCloseBtn.addEventListener('click', function() {
+                // 重置缩放和位移
+                resetImageTransforms();
+                closeFullscreenViewer();
+            });
+            
+            // 添加点击切换事件（点击左右半部分）
+            fullscreenSlider.addEventListener('click', function(e) {
+                if (!fullscreenIsDragging && e.target === fullscreenSlider) {
+                    const rect = fullscreenSlider.getBoundingClientRect();
+                    const centerX = rect.width / 2;
+                    const clickX = e.clientX - rect.left;
+                    
+                    if (clickX < centerX) {
+                        fullscreenGoToPrevSlide();
+                    } else {
+                        fullscreenGoToNextSlide();
+                    }
+                }
+            });
+            
+            // 监听全屏变化事件
+            document.addEventListener('fullscreenchange', function() {
+                if (!document.fullscreenElement && fullscreenViewer && fullscreenViewer.style.display === 'flex') {
+                    closeFullscreenViewer();
+                }
+            });
+        }
+        
+        function renderFullscreenSlides() {
+            fullscreenSliderTrack.innerHTML = '';
+            
+            images.forEach((image, index) => {
+                const slide = document.createElement('div');
+                slide.classList.add('fullscreen-slide');
+                slide.dataset.index = index;
+                slide.style.cssText = `
+                    min-width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: relative;
+                `;
+                
+                const img = document.createElement('img');
+                img.src = image.path;
+                img.alt = image.name;
+                img.style.cssText = `
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                    transform-origin: center;
+                    transition: transform 0.2s ease;
+                    cursor: grab;
+                `;
+                
+                // 为图片添加点击事件，双击重置缩放
+                img.addEventListener('dblclick', function() {
+                    resetImageTransform(this);
+                });
+                
+                // 添加图片标题
+                const caption = document.createElement('div');
+                caption.style.cssText = `
+                    position: absolute;
+                    bottom: 20px;
+                    left: 0;
+                    right: 0;
+                    text-align: center;
+                    color: white;
+                    font-size: 16px;
+                    background-color: rgba(0, 0, 0, 0.7);
+                    padding: 10px;
+                    margin: 0 20px;
+                    border-radius: 5px;
+                `;
+                caption.textContent = image.name;
+                
+                slide.appendChild(img);
+                slide.appendChild(caption);
+                fullscreenSliderTrack.appendChild(slide);
+            });
+            
+            // 更新滑块位置
+            updateFullscreenSlidePosition();
+        }
+        
+        function updateFullscreenSlidePosition() {
+            const slideWidth = -fullscreenCurrentIndex * 100;
+            fullscreenSliderTrack.style.transform = `translateX(${slideWidth}%)`;
+        }
+        
+        function fullscreenGoToPrevSlide() {
+            if (fullscreenCurrentIndex > 0) {
+                fullscreenCurrentIndex--;
+                // 重置当前图片的变换
+                resetImageTransform();
+                updateFullscreenSlidePosition();
+            }
+        }
+        
+        function fullscreenGoToNextSlide() {
+            if (fullscreenCurrentIndex < images.length - 1) {
+                fullscreenCurrentIndex++;
+                // 重置当前图片的变换
+                resetImageTransform();
+                updateFullscreenSlidePosition();
+            }
+        }
+        
+        // 计算两点之间的距离
+        function getDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        
+        // 重置单个图片的变换
+        function resetImageTransform(img) {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            startTranslateX = 0;
+            startTranslateY = 0;
+            lastDistance = null;
+            lastScale = 1;
+            isPinching = false;
+            
+            if (img) {
+                img.style.transform = 'scale(1) translate(0, 0)';
+            }
+        }
+        
+        // 重置所有图片的变换
+        function resetImageTransforms() {
+            const slides = fullscreenSliderTrack.querySelectorAll('.fullscreen-slide img');
+            slides.forEach(img => {
+                resetImageTransform(img);
+            });
+        }
+        
+        function fullscreenTouchStart(e) {
+            fullscreenStartX = getPositionX(e);
+            fullscreenStartY = getPositionY(e);
+            fullscreenIsDragging = true;
+            isPinching = false;
+            
+            // 保存当前的位移状态
+            startTranslateX = translateX;
+            startTranslateY = translateY;
+            
+            // 处理双指触摸开始
+            if (e.type === 'touchstart' && e.touches.length === 2) {
+                lastDistance = getDistance(e.touches);
+                lastScale = scale;
+                isPinching = true;
+                // 双指操作时，不进行图片切换的初始化
+                return;
+            }
+            
+            // 取消正在进行的动画
+            cancelAnimationFrame(fullscreenAnimationID);
+            
+            // 阻止默认行为
+            if (e.type.includes('mouse')) {
+                e.preventDefault();
+            }
+        }
+        
+        function fullscreenTouchMove(e) {
+            if (!fullscreenIsDragging) return;
+            
+            // 获取当前活动的图片
+            const currentSlide = fullscreenSliderTrack.querySelector(`.fullscreen-slide[data-index="${fullscreenCurrentIndex}"]`);
+            if (!currentSlide) return;
+            
+            const currentImg = currentSlide.querySelector('img');
+            if (!currentImg) return;
+            
+            // 处理双指缩放 - 更高优先级
+            if (e.type === 'touchmove' && e.touches.length === 2) {
+                isPinching = true;
+                
+                // 计算新的距离和缩放比例
+                const newDistance = getDistance(e.touches);
+                const newScale = lastScale * (newDistance / lastDistance);
+                
+                // 只保留最小缩放限制，移除最大缩放限制
+                scale = Math.max(0.1, newScale);
+                
+                // 应用缩放和位移
+                currentImg.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+                
+                // 阻止图片滑动切换
+                e.preventDefault();
+                return;
+            }
+            
+            // 单指拖动处理
+            if (scale > 1) {
+                // 当图片被放大时，拖动图片而不是切换
+                if (e.type === 'touchmove' && e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    translateX = startTranslateX + touch.clientX - fullscreenStartX;
+                    translateY = startTranslateY + touch.clientY - fullscreenStartY;
+                } else if (e.type === 'mousemove') {
+                    translateX = startTranslateX + e.clientX - fullscreenStartX;
+                    translateY = startTranslateY + e.clientY - fullscreenStartY;
+                }
+                
+                // 应用位移
+                currentImg.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+                
+                // 阻止图片滑动切换
+                e.preventDefault();
+            } else if (!isPinching) {
+                // 图片未放大且不是从双指操作切换过来时，执行正常的滑动切换
+                const currentPosition = getPositionX(e);
+                const diff = currentPosition - fullscreenStartX;
+                fullscreenCurrentTranslate = fullscreenPrevTranslate + diff;
+                
+                // 限制拖动范围，增加一点弹性
+                if (fullscreenCurrentTranslate > 30) {
+                    fullscreenCurrentTranslate = 30;
+                } else if (fullscreenCurrentTranslate < -(images.length - 1) * 100 - 30) {
+                    fullscreenCurrentTranslate = -(images.length - 1) * 100 - 30;
+                }
+                
+                fullscreenSliderTrack.style.transform = `translateX(${fullscreenCurrentTranslate}%)`;
+            }
+        }
+        
+        function fullscreenTouchEnd() {
+            if (!fullscreenIsDragging) return;
+            
+            fullscreenIsDragging = false;
+            lastDistance = null;
+            
+            // 只有在图片未放大且不是从双指操作结束时才执行滑动切换
+            if (scale <= 1 && !isPinching) {
+                // 根据拖动距离决定是切换图片还是回到原位
+                const threshold = 20;
+                
+                // 计算相对当前位置的偏移百分比
+                const relativeTranslate = fullscreenCurrentTranslate - fullscreenPrevTranslate;
+                
+                if (relativeTranslate > threshold && fullscreenCurrentIndex > 0) {
+                    // 向右拖动超过阈值，显示上一张
+                    fullscreenCurrentIndex--;
+                    // 重置当前图片的变换
+                    resetImageTransform();
+                } else if (relativeTranslate < -threshold && fullscreenCurrentIndex < images.length - 1) {
+                    // 向左拖动超过阈值，显示下一张
+                    fullscreenCurrentIndex++;
+                    // 重置当前图片的变换
+                    resetImageTransform();
+                }
+                
+                // 更新位置
+                const targetPosition = -fullscreenCurrentIndex * 100;
+                fullscreenPrevTranslate = targetPosition;
+                fullscreenCurrentTranslate = targetPosition;
+                
+                // 应用动画
+                fullscreenSliderTrack.style.transform = `translateX(${targetPosition}%)`;
+            }
+            
+            // 重置双指操作标志
+            isPinching = false;
+        }
+        
+        // 初始化
+        if (albumDropdown.options.length > 1) {
+            // 如果有相册，可以预选第一个
+            // albumDropdown.selectedIndex = 1;
+            // handleAlbumChange();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>上传MMD - ThreeWeb</title>
+{% endblock %}
+
+{% block content %}
+    <div class="upload-container">
+        <h2>📤 上传MMD文件</h2>
+        
+        <div class="upload-section" id="upload-area">
+            <div class="upload-icon">📁</div>
+            <p>拖放ZIP文件到此处或点击按钮选择文件</p>
+            <form id="upload-form" enctype="multipart/form-data">
+                <input type="file" id="zip-file" name="file" accept=".zip" style="display: none;">
+                <button type="submit" class="upload-btn">选择ZIP文件</button>
+            </form>
+        </div>
+        
+        <!-- 上传进度和状态 -->
+        <div id="upload-progress" class="progress-container" style="display: none;">
+            <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <div id="upload-status" class="status-message"></div>
+        </div>
+        
+        <!-- 成功消息 -->
+        <div id="upload-success" class="success-message" style="display: none;">
+            <strong>✅ 上传成功！</strong>
+            <p id="success-message"></p>
+        </div>
+        
+        <!-- 错误消息 -->
+        <div id="upload-error" class="error-message" style="display: none;">
+            <strong>❌ 上传失败！</strong>
+            <p id="error-message"></p>
+        </div>
+    </div>
+    
+    <!-- 提示信息 -->
+    <div class="tips-section">
+        <h3>💡 上传提示</h3>
+        <ul>
+            <li>仅支持ZIP格式的MMD模型文件</li>
+            <li>确保ZIP文件中包含必要的模型文件（.pmx, .pmd等）</li>
+            <li>上传完成后，系统会自动解压文件并处理模型</li>
+            <li>您可以在MMD列表页面查看和管理已上传的模型</li>
+        </ul>
+    </div>
+    
+    <style>
+        /* 上传页面样式 */
+        .upload-container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 30px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #ccc;
+            transition: border-color 0.3s, background-color 0.3s;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .upload-section:hover,
+        .upload-section.highlight {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        
+        .upload-section p {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .upload-btn:active {
+            transform: translateY(1px);
+        }
+        
+        /* 进度条和状态消息 */
+        .progress-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 5px;
+        }
+        
+        .status-message {
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* 提示信息 */
+        .tips-section {
+            background-color: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tips-section h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .tips-section ul {
+            color: #856404;
+            padding-left: 20px;
+        }
+        
+        .tips-section li {
+            margin-bottom: 8px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .upload-container {
+                padding: 20px;
+            }
+            
+            .upload-section {
+                padding: 20px;
+            }
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('upload-form');
+            const zipFile = document.getElementById('zip-file');
+            const uploadArea = document.getElementById('upload-area');
+            const progressContainer = document.getElementById('upload-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const statusText = document.getElementById('upload-status');
+            const successMessage = document.getElementById('upload-success');
+            const successText = document.getElementById('success-message');
+            const errorMessage = document.getElementById('upload-error');
+            const errorText = document.getElementById('error-message');
+            
+            // 点击上传区域触发文件选择
+            uploadArea.addEventListener('click', function() {
+                zipFile.click();
+            });
+            
+            // 显示选择的文件名
+            zipFile.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    statusText.textContent = `已选择: ${this.files[0].name}`;
+                }
+            });
+            
+            // 拖拽功能
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadArea.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                uploadArea.classList.remove('highlight');
+            }
+            
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    zipFile.files = files;
+                    statusText.textContent = `已选择: ${files[0].name}`;
+                }
+            }
+            
+            // 表单提交处理
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const file = zipFile.files[0];
+                
+                if (!file) {
+                    showError('请选择要上传的ZIP文件');
+                    return;
+                }
+                
+                if (!file.name.endsWith('.zip')) {
+                    showError('只支持ZIP格式文件');
+                    return;
+                }
+                
+                // 重置消息
+                successMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+                
+                // 显示进度条
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                statusText.textContent = '正在上传文件...';
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    // 使用fetch发送文件，支持进度监控
+                    const response = await fetch('/api/upload-model', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    // 模拟进度更新
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += 5;
+                        if (progress <= 90) {
+                            progressBar.style.width = progress + '%';
+                        }
+                    }, 100);
+                    
+                    if (!response.ok) {
+                        clearInterval(interval);
+                        throw new Error('上传失败: ' + response.statusText);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    clearInterval(interval);
+                    progressBar.style.width = '100%';
+                    statusText.textContent = '上传完成，处理中...';
+                    
+                    if (result.success) {
+                        showSuccess(`文件"${result.fileName}"上传成功！正在处理模型...`);
+                        // 3秒后可以选择跳转或继续上传
+                        setTimeout(() => {
+                            statusText.textContent = '处理完成！';
+                        }, 2000);
+                    } else {
+                        showError(result.error || '上传失败');
+                    }
+                } catch (error) {
+                    showError('上传过程中发生错误: ' + error.message);
+                }
+            });
+            
+            function showSuccess(message) {
+                successText.textContent = message;
+                successMessage.style.display = 'block';
+            }
+            
+            function showError(message) {
+                errorText.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+{% endblock %}
