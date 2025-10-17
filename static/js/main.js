@@ -38,7 +38,7 @@ window.isInitialized = false;
 window.init = function() {
     // 创建场景
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
+    scene.background = new THREE.Color(0x000000); // 黑色背景
   
   // 创建相机
   camera = new THREE.PerspectiveCamera(
@@ -65,6 +65,8 @@ window.init = function() {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
+  
+  // 初始化完成
   
   // 移除了辅助网格，简化显示效果
   
@@ -101,6 +103,8 @@ window.init = function() {
             console.log('模型旋转状态:', isRotating ? '开启' : '关闭');
         });
     }
+    
+    // 滤镜功能已移除
     
     // 设置初始化完成标志
     window.isInitialized = true;
@@ -660,24 +664,40 @@ function processModelPath(path) {
   }
 }
 
-function animate() {
+let lastTime = 0;
+
+function animate(time) {
   requestAnimationFrame(animate);
   
   controls.update();
   
-  // 模型旋转逻辑
+  // 计算时间增量，确保旋转速度固定（不受帧率影响）
+  if (!lastTime) lastTime = time;
+  const delta = (time - lastTime) / 1000; // 转换为秒
+  lastTime = time;
+  
+  // 模型旋转逻辑 - 使用基于时间的固定速度
   if (isRotating && currentModel) {
-    currentModel.rotation.y += rotationSpeed;
+    // 设置固定的每秒旋转角度（例如每秒旋转0.5弧度，约28.6度）
+    const fixedRotationSpeed = 0.5; // 每秒旋转的弧度数
+    currentModel.rotation.y += fixedRotationSpeed * delta;
   }
   
   if (helper) {
-    helper.update(1 / 60);
+    helper.update(delta);
   }
   
+  // 直接使用渲染器渲染场景
   renderer.render(scene, camera);
 }
 
 // 移除了示例场景和路径测试功能
+
+// 初始化滤镜系统
+// 滤镜功能已移除
+
+// 切换滤镜效果
+// 滤镜功能已移除
 
 // 注意：自动初始化代码已移除
 // 现在应由view.html显式调用init()函数和模型加载函数
