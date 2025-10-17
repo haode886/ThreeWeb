@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMD模型查看 - MMD模型查看器</title>
+    <script src="/static/threejs/three.min.js"></script>
+    <script src="/static/threejs/OrbitControls.js"></script>
+    <script src="/static/threejs/mmdparser.min.js"></script>
+    <script src="/static/threejs/MMDToonShader.js"></script>
+    <script src="/static/threejs/MMDLoader.js"></script>
+    <script src="/static/threejs/MMDAnimationHelper.js"></script>
+    <script src="/static/threejs/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .header .btn-back {
+            background-color: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .header .btn-back:hover {
+            background-color: #16213e;
+        }
+        
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 16px;
+            color: #ffffff;
+        }
+        
+        .model-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+        
+        .control-btn {
+            background-color: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background-color: #16213e;
+            transform: translateY(-2px);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #e94560;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            text-align: center;
+            z-index: 3000;
+        }
+        
+        .error-message .btn-close {
+            margin-top: 15px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .model-selector {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            z-index: 999;
+            background-color: rgba(0, 0, 0, 0.9);
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .model-selector h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #ffffff;
+        }
+        
+        .model-selector select {
+            width: 100%;
+            min-width: 200px;
+            padding: 8px 12px;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .model-selector select:hover {
+            border-color: #555;
+        }
+        
+        .model-selector select:focus {
+            outline: none;
+            border-color: #64b5f6;
+            box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <button class="btn-back" onclick="window.location.href='/';">返回模型列表</button>
+        <h1 id="model-name">加载中...</h1>
+        <div style="width: 120px;"></div> <!-- 占位，保持标题居中 -->
+    </header>
+    
+    <!-- PMX模型选择器 -->
+    <div class="model-selector">
+        <h3>选择模型文件</h3>
+        <select id="pmx-file-selector" disabled>
+            <option value="">加载中...</option>
+        </select>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">正在加载模型...</div>
+    </div>
+    
+    <div class="model-controls">
+        <button class="control-btn" id="load-model">重新加载模型</button>
+        <button class="control-btn" id="reset-view">重置视角</button>
+        <button class="control-btn" id="toggle-rotation">开启旋转</button>
+    </div>
+    
+    <div class="error-message" id="error-message" style="display: none;">
+        <h3>加载模型失败</h3>
+        <p id="error-text">无法加载模型，请检查文件是否存在或格式是否正确。</p>
+        <button class="btn-close" onclick="document.getElementById('error-message').style.display = 'none';">关闭</button>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        
+        // 页面加载完成后执行
+        window.addEventListener('load', function() {
+            // 确保加载覆盖层始终显示（即使在JS执行前也能看到）
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            
+            // 立即更新加载文本，给用户明确的反馈
+            loadingText.textContent = '正在加载模型信息...';
+            
+            try {
+                // 解析URL参数
+                function getUrlParameter(name) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    return urlParams.get(name);
+                }
+                
+                // 获取模型信息
+                const modelName = getUrlParameter('name') || '未命名模型';
+                const modelPath = getUrlParameter('model');
+                const zipPath = getUrlParameter('zip');
+                
+                // 更新页面标题和模型名称
+                document.title = `MMD模型查看 - ${modelName}`;
+                document.getElementById('model-name').textContent = modelName;
+                
+                console.log('模型名称:', modelName);
+                console.log('PMX模型路径:', modelPath);
+                console.log('ZIP模型路径:', zipPath);
+                
+                // 绑定加载按钮事件
+                document.getElementById('load-model').addEventListener('click', function() {
+                    loadingOverlay.style.display = 'flex';
+                    loadModel();
+                });
+                
+                // 绑定重置视角按钮事件
+                document.getElementById('reset-view').addEventListener('click', function() {
+                    if (window.resetView) {
+                        window.resetView();
+                    } else {
+                        console.warn('重置视角功能尚未初始化');
+                    }
+                });
+                
+                // 加载模型的函数 - 异步处理，确保页面先显示再处理解压
+                async function loadModel() {
+                    loadingText.textContent = '正在检查模型状态...';
+                    
+                    try {
+                        // 先确保Three.js场景初始化完成
+                        if (!window.init || !window.loadMMDModel) {
+                            console.error('模型查看器初始化未完成');
+                            // 定期检查直到初始化完成
+                            const checkInitInterval = setInterval(() => {
+                                if (window.init && window.loadMMDModel) {
+                                    clearInterval(checkInitInterval);
+                                    // 初始化完成后继续处理
+                                    initAndLoadModel();
+                                }
+                            }, 200);
+                            
+                            // 设置超时保护
+                            setTimeout(() => {
+                                clearInterval(checkInitInterval);
+                                showError('模型查看器初始化超时，请刷新页面重试');
+                            }, 10000);
+                            return;
+                        }
+                        
+                        // 初始化完成后继续处理
+                        initAndLoadModel();
+                    } catch (error) {
+                        console.error('加载模型过程中发生错误:', error);
+                        showError('加载模型失败: ' + (error.message || '未知错误'));
+                    }
+                }
+                
+                // 获取PMX文件列表
+                async function fetchPmxFiles(zipFile) {
+                    try {
+                        const response = await fetch('/api/get-pmx-files', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ zipPath: zipFile })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.error) {
+                            console.error('获取PMX文件列表失败:', result.error);
+                            return [];
+                        }
+                        
+                        return result.pmxFiles || [];
+                    } catch (error) {
+                        console.error('获取PMX文件列表时发生错误:', error);
+                        return [];
+                    }
+                }
+                
+                // 填充PMX文件选择器
+                function populatePmxSelector(pmxFiles, currentPmxPath) {
+                    const selector = document.getElementById('pmx-file-selector');
+                    if (!selector || !pmxFiles.length) return;
+                    
+                    // 清空选择器
+                    selector.innerHTML = '';
+                    
+                    // 添加选项
+                    pmxFiles.forEach(pmxFile => {
+                        const option = document.createElement('option');
+                        option.value = pmxFile.path;
+                        option.textContent = pmxFile.displayPath;
+                        option.selected = currentPmxPath === pmxFile.path;
+                        selector.appendChild(option);
+                    });
+                    
+                    // 启用选择器
+                    selector.disabled = false;
+                    
+                    // 添加选择事件
+                    selector.onchange = function() {
+                        const selectedPath = this.value;
+                        if (selectedPath) {
+                            loadingOverlay.style.display = 'flex';
+                            loadingText.textContent = '正在切换模型...';
+                            loadMMDModelFromPath(selectedPath).then(() => {
+                                loadingOverlay.style.display = 'none';
+                            }).catch(error => {
+                                showError('切换模型失败: ' + (error.message || '未知错误'));
+                            });
+                        }
+                    };
+                }
+                
+                // 初始化场景并加载模型的函数
+                async function initAndLoadModel() {
+                    try {
+                        // 确保初始化函数已经执行
+                        if (!window.isInitialized) {
+                            console.log('初始化Three.js场景');
+                            window.init();
+                        }
+                        
+                        // 立即显示加载中状态
+                        document.getElementById('loading-text').textContent = `正在处理模型: ${modelName}...`;
+                        
+                        if (zipPath) {
+                            // 确保传递给后端的是文件名（不含路径）
+                            const fileName = zipPath.split('/').pop();
+                            console.log('尝试加载ZIP模型:', fileName);
+                            
+                            // 检查ZIP文件是否已解压
+                            const checkResponse = await fetch('/api/check-unzip', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ zipPath: fileName })
+                            });
+                            
+                            const checkData = await checkResponse.json();
+                            
+                            if (checkData.error) {
+                                throw new Error(checkData.error);
+                            }
+                            
+                            if (checkData.status === 'unzipped') {
+                                // 已解压，直接加载模型
+                                loadingText.textContent = '模型已准备好，正在加载...';
+                                await loadMMDModelFromPath(checkData.pmxPath);
+                                
+                                // 获取并填充PMX文件列表
+                                const pmxFiles = await fetchPmxFiles(fileName);
+                                populatePmxSelector(pmxFiles, checkData.pmxPath);
+                            } else {
+                                // 未解压，开始解压，给用户明确的解压提示
+                                loadingText.textContent = '检测到新模型，正在解压文件...';
+                                console.log('开始解压模型文件:', fileName);
+                                
+                                const unzipResponse = await fetch('/api/unzip-model', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ zipPath: fileName })
+                                });
+                                
+                                if (!unzipResponse.ok) {
+                                    throw new Error('解压请求失败');
+                                }
+                                
+                                const unzipData = await unzipResponse.json();
+                                
+                                if (!unzipData.success) {
+                                    throw new Error(unzipData.error || '解压失败');
+                                }
+                                
+                                loadingText.textContent = '解压完成，正在加载模型...';
+                                await loadMMDModelFromPath(unzipData.pmxPath);
+                                
+                                // 获取并填充PMX文件列表
+                                const pmxFiles = await fetchPmxFiles(fileName);
+                                populatePmxSelector(pmxFiles, unzipData.pmxPath);
+                            }
+                        } else if (modelPath) {
+                            console.log('尝试加载PMX模型:', modelPath);
+                            loadingText.textContent = '正在加载模型...';
+                            await loadMMDModelFromPath(modelPath);
+                        } else {
+                            throw new Error('未指定模型路径');
+                        }
+                        
+                        loadingOverlay.style.display = 'none';
+                        console.log('模型加载成功');
+                    } catch (error) {
+                        console.error('加载模型过程中发生错误:', error);
+                        showError('加载模型失败: ' + (error.message || '未知错误'));
+                    }
+                }
+                
+                // 从路径加载模型的包装函数
+                function loadMMDModelFromPath(pmxPath) {
+                    return new Promise((resolve, reject) => {
+                        try {
+                            // 确保路径格式正确
+                            let processedPath = pmxPath;
+                            if (!processedPath.startsWith('/')) {
+                                processedPath = '/' + processedPath;
+                            }
+                            
+                            // 使用main.js中的loadMMDModel函数
+                            // 由于loadMMDModel不返回Promise，我们需要通过事件或回调来确定完成
+                            
+                            // 临时覆盖updateModelInfo函数来检测加载完成
+                            const originalUpdateModelInfo = window.updateModelInfo;
+                            window.updateModelInfo = function(modelName) {
+                                originalUpdateModelInfo(modelName);
+                                
+                                // 检查模型是否加载成功（简单判断：如果模型名不是以"加载中"开头，则认为成功）
+                                if (!modelName.startsWith('加载中') && 
+                                    !modelName.startsWith('解压中') &&
+                                    !modelName.startsWith('加载失败')) {
+                                    resolve();
+                                } else if (modelName.startsWith('加载失败')) {
+                                    reject(new Error(modelName));
+                                }
+                            };
+                            
+                            // 临时覆盖hideLoadingIndicator函数
+                            const originalHideLoading = window.hideLoadingIndicator;
+                            window.hideLoadingIndicator = function() {
+                                originalHideLoading();
+                                // 如果已经处理过resolve/reject，则不再处理
+                                if (!resolved) {
+                                    resolved = true;
+                                    resolve();
+                                }
+                            };
+                            
+                            let resolved = false;
+                            
+                            // 设置超时，以防加载卡住
+                            const timeoutId = setTimeout(() => {
+                                if (!resolved) {
+                                    resolved = true;
+                                    window.updateModelInfo = originalUpdateModelInfo;
+                                    window.hideLoadingIndicator = originalHideLoading;
+                                    reject(new Error('模型加载超时'));
+                                }
+                            }, 30000); // 30秒超时
+                            
+                            // 调用加载函数
+                            window.loadMMDModel(processedPath);
+                            
+                            // 清理超时和临时覆盖
+                            setTimeout(() => {
+                                if (!resolved) {
+                                    resolved = true;
+                                    clearTimeout(timeoutId);
+                                    window.updateModelInfo = originalUpdateModelInfo;
+                                    window.hideLoadingIndicator = originalHideLoading;
+                                }
+                            }, 35000);
+                            
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
+                }
+                
+                // 显示错误信息
+                function showError(message) {
+                    loadingOverlay.style.display = 'none';
+                    const errorElement = document.getElementById('error-message');
+                    const errorTextElement = document.getElementById('error-text');
+                    errorTextElement.textContent = message;
+                    errorElement.style.display = 'block';
+                }
+                
+                // 等待main.js加载完成后开始加载模型
+                setTimeout(() => {
+                    if (window.init) {
+                        loadModel();
+                    } else {
+                        showError('模型查看器初始化失败，请刷新页面重试');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('页面初始化错误:', error);
+                loadingOverlay.style.display = 'none';
+                showError('页面初始化错误: ' + (error.message || '未知错误'));
+            }
+        });
+    </script>
+</body>
+</html>
