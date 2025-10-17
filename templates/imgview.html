@@ -180,7 +180,8 @@
         
         .pagination {
             display: inline-flex;
-            gap: 10px;
+            align-items: center;
+            justify-content: center;
             margin: 0;
             padding: 0;
         }
@@ -407,6 +408,9 @@
         let prevTranslate = 0;
         let isDragging = false;
         let animationID = 0;
+        // 双击检测变量
+        let lastTapTime = 0;
+        let lastTapTarget = null;
         
         // DOM元素
         const albumDropdown = document.getElementById('album-dropdown');
@@ -532,9 +536,27 @@
                 img.src = image.path;
                 img.alt = image.name;
                 
-                // 添加点击事件，触发全屏预览
-                img.addEventListener('click', () => {
-                    openFullscreenViewer(index);
+                // 添加点击事件，使用自定义双击检测
+                img.addEventListener('click', function() {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTapTime;
+                    
+                    // 检测是否为双击：时间间隔小于300ms且是同一目标
+                    if (tapLength < 300 && tapLength > 0 && lastTapTarget === this) {
+                        openFullscreenViewer(index);
+                        // 重置双击状态
+                        lastTapTime = 0;
+                        lastTapTarget = null;
+                    } else {
+                        // 记录单击信息
+                        lastTapTime = currentTime;
+                        lastTapTarget = this;
+                        
+                        // 设置300ms后清除，避免连续点击被误判
+                        setTimeout(() => {
+                            lastTapTarget = null;
+                        }, 300);
+                    }
                 });
                 
                 // 添加加载指示器
@@ -559,35 +581,29 @@
             }
         }
         
-        // 渲染分页指示器
+        // 渲染分页指示器 - 修改为1/n显示形式
         function renderPagination() {
             pagination.innerHTML = '';
             
-            images.forEach((_, index) => {
-                const dot = document.createElement('div');
-                dot.classList.add('pagination-dot');
-                dot.dataset.index = index;
-                
-                dot.addEventListener('click', () => {
-                    currentImageIndex = index;
-                    updateSlidePosition();
-                    updatePagination();
-                });
-                
-                pagination.appendChild(dot);
-            });
+            // 创建页码文本元素
+            const pageInfo = document.createElement('div');
+            pageInfo.classList.add('page-info');
+            pageInfo.style.color = '#fff';
+            pageInfo.style.fontSize = '16px';
+            pageInfo.style.fontWeight = 'bold';
+            pageInfo.style.minWidth = '60px';
+            pageInfo.style.textAlign = 'center';
+            
+            pagination.appendChild(pageInfo);
         }
         
         // 更新分页指示器
         function updatePagination() {
-            const dots = pagination.querySelectorAll('.pagination-dot');
-            dots.forEach((dot, index) => {
-                if (index === currentImageIndex) {
-                    dot.classList.add('active');
-                } else {
-                    dot.classList.remove('active');
-                }
-            });
+            const pageInfo = pagination.querySelector('.page-info');
+            if (pageInfo && images.length > 0) {
+                // 显示 1/n 格式，当前页码从1开始计数
+                pageInfo.textContent = `${currentImageIndex + 1}/${images.length}`;
+            }
         }
         
         // 更新图片标题
@@ -639,10 +655,11 @@
             // 取消正在进行的动画
             cancelAnimationFrame(animationID);
             
-            // 阻止默认行为以避免不必要的拖动
+            // 对于鼠标事件，阻止文本选择等默认行为
             if (e.type.includes('mouse')) {
                 e.preventDefault();
             }
+            // 注意：在touchstart中不阻止默认行为，以允许点击事件正常触发
         }
         
         // 触摸/鼠标移动
@@ -653,6 +670,11 @@
             const diff = currentPosition - startX;
             totalMoveDistance = Math.abs(diff); // 记录移动总距离
             currentTranslate = prevTranslate + diff;
+            
+            // 只有在有明显移动时才阻止默认行为，避免干扰点击事件
+            if (totalMoveDistance > 5) {
+                e.preventDefault();
+            }
             
             // 限制拖动范围，增加一点弹性
             if (currentTranslate > 30) {
@@ -1057,13 +1079,13 @@
                 lastScale = scale;
                 isPinching = true;
                 // 双指操作时，不进行图片切换的初始化
-                return;
             }
             
             // 取消正在进行的动画
             cancelAnimationFrame(fullscreenAnimationID);
             
-            // 阻止默认行为
+            // 注意：在touchstart中不阻止默认行为，以允许点击事件正常触发
+            // 对于鼠标事件，阻止默认行为
             if (e.type.includes('mouse')) {
                 e.preventDefault();
             }
@@ -1078,6 +1100,17 @@
             
             const currentImg = currentSlide.querySelector('img');
             if (!currentImg) return;
+            
+            // 计算移动距离
+            const currentX = getPositionX(e);
+            const currentY = getPositionY(e);
+            const diffX = currentX - fullscreenStartX;
+            const diffY = currentY - fullscreenStartY;
+            
+            // 只有在有明显移动时才阻止默认行为
+            if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
+                e.preventDefault();
+            }
             
             // 处理双指缩放 - 更高优先级
             if (e.type === 'touchmove' && e.touches.length === 2) {

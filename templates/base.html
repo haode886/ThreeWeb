@@ -3,96 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% block title %}
-    <title>ThreeWeb</title>
-    {% endblock %}
+    <title>{% block title %}ThreeWeb{% endblock %}</title>
     <style>
-        * {
+        body {
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            background-color: #f0f0f0;
         }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f5f5f5;
-            padding: 0;
-        }
-        
-        /* 导航栏样式 */
+        /* Tailwind CSS风格的导航栏 */
         header {
-            background-color: #2c3e50;
-            color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
+            background-color: #1f2937; /* Tailwind的bg-gray-800 */
+            padding: 1rem 0; /* p-4 */
+            margin-bottom: 2rem; /* mb-8 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        
         .header-container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
+            padding: 0 1.5rem; /* px-6 */
         }
-        
         header h1 {
+            color: #f9fafb; /* Tailwind的text-white */
             margin: 0;
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 1.5rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
         }
-        
-        nav {
-            display: flex;
-            gap: 10px;
-        }
-        
         nav a {
-            color: white;
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            position: relative;
+            color: #e5e7eb; /* Tailwind的text-gray-200 */
+            margin: 0 0.75rem; /* mx-3 */
+            font-size: 1rem;
+            padding: 0.5rem 0.75rem; /* py-2 px-3 */
+            border-radius: 0.375rem; /* rounded-md */
+            transition: background-color 0.2s ease;
         }
-        
         nav a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: translateY(-1px);
+            background-color: rgba(255,255,255,0.1); /* hover:bg-gray-700 */
         }
-        
         nav a.active {
-            background-color: #3498db;
+            background-color: #374151; /* bg-gray-700 */
+            color: #ffffff;
+            font-weight: 500;
         }
-        
-        /* 主要内容区域 */
-        .main-content {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
         }
-        
+        h1.page-title {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
         /* 响应式设计 */
         @media (max-width: 768px) {
             .header-container {
                 flex-direction: column;
-                gap: 15px;
-                text-align: center;
+                padding: 0 15px;
             }
-            
-            nav {
-                justify-content: center;
-                flex-wrap: wrap;
+            header h1 {
+                margin-bottom: 15px;
+            }
+            nav a {
+                margin: 0 10px;
+                font-size: 14px;
             }
         }
     </style>
-    {% block head %}{% endblock %}
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <header>
@@ -101,15 +88,17 @@
             <nav>
                 <a href="/" {% if request.path == '/' %}class="active"{% endif %}>MMD列表</a>
                 <a href="/upload" {% if request.path == '/upload' %}class="active"{% endif %}>文件上传</a>
-                <a href="/imgview" {% if request.path == '/imgview' %}class="active"{% endif %}>图片预览</a>
+                <a href="/imgview">图片预览</a>
             </nav>
         </div>
     </header>
     
-    <div class="main-content">
-        {% block content %}{% endblock %}
+    <div class="container">
+        {% block content %}
+        <!-- 内容将在子模板中定义 -->
+        {% endblock %}
     </div>
     
-    {% block scripts %}{% endblock %}
+    {% block extra_script %}{% endblock %}
 </body>
 </html>
