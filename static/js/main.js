@@ -62,7 +62,7 @@ window.init = function() {
   scene.add(ambientLight);
   
   // 添加方向光
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
   
@@ -80,7 +80,7 @@ window.init = function() {
   window.addEventListener('resize', onWindowResize);
   
   // 绑定模型选择事件
-    document.getElementById('load-model').addEventListener('click', loadSelectedModel);
+    // 加载按钮已移除，模型通过选择器自动加载
     
     // 绑定重置视角按钮事件
     if (document.getElementById('reset-view')) {
@@ -97,7 +97,7 @@ window.init = function() {
     if (document.getElementById('toggle-rotation')) {
         document.getElementById('toggle-rotation').addEventListener('click', function() {
             isRotating = !isRotating;
-            this.textContent = isRotating ? '停止旋转' : '开启旋转';
+            // 移除文本更改，保留图标显示
             console.log('模型旋转状态:', isRotating ? '开启' : '关闭');
         });
     }
@@ -353,34 +353,7 @@ window.extractAndLoadModelFromZip = async function(zipPath) {
     }
     
     // 修改加载模型按钮的点击事件处理函数
-    document.getElementById('load-model').addEventListener('click', function() {
-        console.log('加载模型按钮被点击');
-        // 首先尝试获取pmx-file-selector（view.html中的选择器）
-        const pmxSelector = document.getElementById('pmx-file-selector');
-        // 然后尝试获取models选择器（可能在其他页面使用）
-        const modelsSelector = document.getElementById('models');
-        
-        if (pmxSelector && !pmxSelector.disabled) {
-            const selectedModel = pmxSelector.value;
-            if (selectedModel) {
-                console.log('选择的PMX文件:', selectedModel);
-                loadMMDModel(selectedModel);
-            }
-        } else if (modelsSelector) {
-            const selectedModel = modelsSelector.value;
-            console.log('选择的模型:', selectedModel);
-            if (selectedModel) {
-                loadMMDModel(selectedModel);
-            }
-        } else {
-            console.log('未找到有效的模型选择器');
-            // 如果没有选择器，可以尝试重新加载当前模型
-            if (window.location.search.includes('zip=')) {
-                window.location.reload();
-            }
-        }
-    });
-    
+    // 加载按钮已移除，此代码不再需要
     // 检查URL参数
     const zipParam = getUrlParameter('zip');
     const modelParam = getUrlParameter('model');
@@ -486,15 +459,48 @@ function loadSelectedModel() {
   }
 }
 
-// 更新状态信息的函数
-// 简化错误处理，只在控制台输出
-function handleError(err, modelPath = '') {
-  console.error('MMD模型加载错误:', {
-    message: err.message || '未知错误',
-    modelPath: modelPath,
-    timestamp: new Date().toLocaleString()
-  });
+function handleError(error) {
+    console.error('Error:', error);
+    const errorElement = document.getElementById('error-message');
+    const errorTextElement = document.getElementById('error-text');
+    
+    if (errorTextElement) {
+        errorTextElement.textContent = error.message || '未知错误';
+    }
+    
+    if (errorElement) {
+        errorElement.style.display = 'block';
+    }
+    
+    hideLoadingIndicator();
 }
+
+// 全屏功能
+window.toggleFullscreen = function() {
+    const canvas = document.getElementById('canvas');
+    const doc = window.document;
+    const docEl = doc.documentElement;
+    
+    const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen ||
+        docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+    const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen ||
+        doc.webkitExitFullscreen || doc.msExitFullscreen;
+    
+    if (!doc.fullscreenElement && !doc.mozFullScreenElement &&
+        !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+        // 进入全屏
+        if (canvas) {
+            requestFullScreen.call(canvas);
+        } else {
+            requestFullScreen.call(docEl);
+        }
+    } else {
+        // 退出全屏
+        cancelFullScreen.call(doc);
+    }
+};
+
+// 截图功能已移除
 
 // 显示加载指示器
 function showLoadingIndicator() {
@@ -512,12 +518,10 @@ function hideLoadingIndicator() {
   }
 }
 
-// 更新模型信息显示
+// 更新模型信息显示 - 现在我们使用选择器作为主要显示，这里只保留日志记录
 function updateModelInfo(modelName) {
-  const modelInfoElement = document.getElementById('current-model-name');
-  if (modelInfoElement) {
-    modelInfoElement.textContent = `当前模型: ${modelName}`;
-  }
+    console.log('Updated model info:', modelName);
+    // 不再更新model-name-display元素，因为它已被选择器替代
 }
 
 window.loadMMDModel = async function(modelPath) {

@@ -11,6 +11,7 @@
     <script src="/static/threejs/MMDLoader.js"></script>
     <script src="/static/threejs/MMDAnimationHelper.js"></script>
     <script src="/static/threejs/jszip.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -23,41 +24,6 @@
             background-color: #0a0a0a;
             color: #ffffff;
             overflow: hidden;
-        }
-        
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 15px 20px;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header h1 {
-            font-size: 20px;
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        .header .btn-back {
-            background-color: #1a1a2e;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        
-        .header .btn-back:hover {
-            background-color: #16213e;
         }
         
         #canvas {
@@ -99,40 +65,6 @@
             color: #ffffff;
         }
         
-        .model-controls {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 15px 25px;
-            border-radius: 30px;
-            display: flex;
-            gap: 15px;
-            z-index: 1000;
-        }
-        
-        .control-btn {
-            background-color: #1a1a2e;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .control-btn:hover {
-            background-color: #16213e;
-            transform: translateY(-2px);
-        }
-        
-        .control-btn:active {
-            transform: translateY(0);
-        }
-        
         .error-message {
             position: fixed;
             top: 50%;
@@ -157,57 +89,113 @@
             cursor: pointer;
         }
         
-        .model-selector {
-            position: fixed;
-            top: 70px;
-            left: 20px;
-            z-index: 999;
+        /* 选择器按钮样式 */
+        .top-right-selector .icon-btn {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .top-right-selector .icon-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        /* 右上角模型选择器 */
+        .top-right-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+        }
+
+        .top-right-selector select {
             background-color: rgba(0, 0, 0, 0.9);
-            border-radius: 6px;
-            padding: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-        }
-        
-        .model-selector h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            color: #ffffff;
-        }
-        
-        .model-selector select {
-            width: 100%;
-            min-width: 200px;
-            padding: 8px 12px;
-            background-color: #1a1a2e;
             color: #ffffff;
             border: 1px solid #333;
+            padding: 8px 12px;
             border-radius: 4px;
             font-size: 13px;
             cursor: pointer;
-            transition: border-color 0.3s;
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
-        .model-selector select:hover {
+
+        .top-right-selector select:hover {
             border-color: #555;
         }
-        
-        .model-selector select:focus {
+
+        .top-right-selector select:focus {
             outline: none;
             border-color: #64b5f6;
             box-shadow: 0 0 0 2px rgba(100, 181, 246, 0.2);
         }
+        
+        /* 左下角控制按钮区域 */
+        #controls-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+        
+        /* 图标按钮样式 */
+        .icon-btn {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        .icon-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+        
+
     </style>
 </head>
 <body>
-    <header class="header">
-        <button class="btn-back" onclick="window.location.href='/';">返回模型列表</button>
-        <h1 id="model-name">加载中...</h1>
-        <div style="width: 120px;"></div> <!-- 占位，保持标题居中 -->
-    </header>
-    
-    <!-- PMX模型选择器 -->
-    <div class="model-selector">
-        <h3>选择模型文件</h3>
+    <!-- 右上角模型选择器 -->
+    <div id="model-selector" class="top-right-selector">
         <select id="pmx-file-selector" disabled>
             <option value="">加载中...</option>
         </select>
@@ -220,10 +208,12 @@
         <div class="loading-text" id="loading-text">正在加载模型...</div>
     </div>
     
-    <div class="model-controls">
-        <button class="control-btn" id="load-model">重新加载模型</button>
-        <button class="control-btn" id="reset-view">重置视角</button>
-        <button class="control-btn" id="toggle-rotation">开启旋转</button>
+    <!-- 左下角控制按钮区域 -->
+    <div id="controls-panel">
+        <button id="btn-back" class="icon-btn" title="返回模型列表" onclick="window.location.href='/'"><i class="fas fa-home"></i></button>
+        <button id="reload-model" class="icon-btn" title="重新加载模型"><i class="fas fa-redo-alt"></i></button>
+        <button id="toggle-rotation" class="icon-btn" title="开启旋转"><i class="fas fa-sync-alt"></i></button>
+        <button id="toggle-fullscreen" class="icon-btn" title="全屏"><i class="fas fa-expand"></i></button>
     </div>
     
     <div class="error-message" id="error-message" style="display: none;">
@@ -256,27 +246,31 @@
                 const modelPath = getUrlParameter('model');
                 const zipPath = getUrlParameter('zip');
                 
-                // 更新页面标题和模型名称
+                // 更新页面标题
                 document.title = `MMD模型查看 - ${modelName}`;
-                document.getElementById('model-name').textContent = modelName;
                 
                 console.log('模型名称:', modelName);
                 console.log('PMX模型路径:', modelPath);
                 console.log('ZIP模型路径:', zipPath);
                 
                 // 绑定加载按钮事件
-                document.getElementById('load-model').addEventListener('click', function() {
-                    loadingOverlay.style.display = 'flex';
-                    loadModel();
+                // 加载按钮已移除，此事件监听器不再需要
+                
+                // 重置视角按钮已移除
+
+                // 绑定全屏按钮事件
+                document.getElementById('toggle-fullscreen').addEventListener('click', function() {
+                    if (window.toggleFullscreen) {
+                        window.toggleFullscreen();
+                    } else {
+                        console.warn('全屏功能尚未初始化');
+                    }
                 });
                 
-                // 绑定重置视角按钮事件
-                document.getElementById('reset-view').addEventListener('click', function() {
-                    if (window.resetView) {
-                        window.resetView();
-                    } else {
-                        console.warn('重置视角功能尚未初始化');
-                    }
+                // 绑定重新加载模型按钮事件
+                document.getElementById('reload-model').addEventListener('click', function() {
+                    loadingOverlay.style.display = 'flex';
+                    loadModel();
                 });
                 
                 // 加载模型的函数 - 异步处理，确保页面先显示再处理解压
